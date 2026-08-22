@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Interaktives Dashboard für CPC-, SMPS-, Wetter- und ARPA-Luftqualitätsdaten der Messkampagne in Rom.">
+  <title>Partikelmonitoring Rom</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div><p class="eyebrow">ISPRA · ROM · 2026</p><h1>Partikelmonitoring</h1></div>
+    <div class="status"><span></span><b>Messkampagne geladen</b><small id="period">Daten werden vorbereitet …</small></div>
+  </header>
+  <nav class="tabs" aria-label="Dashboardbereiche">
+    <button class="active" data-tab="overview">Übersicht</button>
+    <button data-tab="data">Datenplot</button>
+    <button data-tab="correlation">Korrelationen</button>
+    <button data-tab="map">Animation & Karte</button>
+    <button data-tab="method">Methodik</button>
+  </nav>
+
+  <main>
+    <section id="overview" class="tab active">
+      <div class="hero-grid">
+        <article class="intro"><p class="eyebrow">GESAMTZEITRAUM</p><h2>CPC und SMPS im direkten Vergleich</h2><p>Partikelanzahl, Größenverteilung, Wetter und offizielle Luftqualität in einer gemeinsamen Zeitbasis.</p><div id="overviewStats" class="stat-row"></div></article>
+        <article class="card info-card"><span class="info" data-tip="Spearman vergleicht Rangfolgen und erfasst monotone Beziehungen. Pearson misst lineare Zusammenhänge und reagiert stärker auf Ausreißer.">i</span><p class="eyebrow">SCHNELLBEFUND</p><strong id="quickCorr">–</strong><p id="quickCorrText">CPC–SMPS Spearman-Korrelation</p></article>
+      </div>
+      <article class="card chart-card"><div class="card-head"><div><p class="eyebrow">ZEITVERLAUF</p><h3>Gesamtkonzentrationen</h3></div><span class="info" data-tip="Zoomen oder einen Zeitraum auf der x-Achse markieren. Die Datumsbeschriftung passt sich automatisch an.">i</span></div><div id="overviewPlot" class="plot tall"></div></article>
+      <div class="two-col"><article class="card chart-card"><p class="eyebrow">WOCHEN</p><h3>Wöchentliche Mittelwerte</h3><div id="weeklyPlot" class="plot"></div></article><article class="card chart-card"><p class="eyebrow">TAGESART</p><h3>Werktag und Wochenende</h3><div id="workdayPlot" class="plot"></div></article></div>
+    </section>
+
+    <section id="data" class="tab">
+      <div class="section-title"><div><p class="eyebrow">FREIE KOMBINATION</p><h2>Datenplot</h2><p>Mehrere Messreihen gemeinsam vergleichen oder mit eigenen Y-Achsen darstellen.</p></div><span class="info" data-tip="Standardisiert bedeutet: Mittelwert 0 und Standardabweichung 1. Dadurch werden Verläufe trotz unterschiedlicher Einheiten vergleichbar.">i</span></div>
+      <article class="card controls"><div><label>Messreihen</label><div id="dataVariables" class="check-grid"></div></div><label>Mittelung<select id="dataAverage"><option value="5">5 Minuten</option><option value="30">30 Minuten</option><option value="60" selected>1 Stunde</option><option value="720">12 Stunden</option><option value="1440">24 Stunden</option></select></label><label>Darstellung<select id="dataMode"><option value="standard">Standardisiert gemeinsam</option><option value="axes">Eigene Y-Achsen</option></select></label><label class="switch"><input id="showHeatmap" type="checkbox"><span></span>SMPS-Verteilung als Heatmap</label></article>
+      <article class="card chart-card"><div id="dataPlot" class="plot tall"></div></article>
+      <article id="heatmapCard" class="card chart-card hidden"><div class="card-head"><div><p class="eyebrow">GRÖSSENVERTEILUNG</p><h3>SMPS dN/dlogDp</h3></div><span class="info" data-tip="Die Farbe zeigt den dekadischen Logarithmus der Partikelanzahl je Größenintervall; die Größenachse ist logarithmisch.">i</span></div><div id="heatmapPlot" class="plot tall"></div></article>
+    </section>
+
+    <section id="correlation" class="tab">
+      <div class="section-title"><div><p class="eyebrow">EINZELANALYSE</p><h2>Korrelationen mit Partikeldaten</h2><p>SMPS-Kanäle sind bewusst ausgeschlossen; verglichen werden Gesamtzahl und Kennwerte der Verteilung.</p></div></div>
+      <div class="analysis-grid">
+        <aside class="card controls vertical"><label>Partikelkenngröße<select id="corrResponse"></select></label><label>Umweltparameter<select id="corrPredictors" multiple size="10"></select></label><label>Korrelationsart<select id="corrMethod"><option>Spearman</option><option>Pearson</option></select></label><label>Mittelung<select id="corrAverage"><option value="5">5 Minuten</option><option value="30">30 Minuten</option><option value="60" selected>1 Stunde</option><option value="720">12 Stunden</option><option value="1440">24 Stunden</option></select></label><label>Zeitversatz Wetter → Partikel <output id="lagValue">0 h</output><input id="corrLag" type="range" min="-48" max="48" value="0"></label><div class="definition"><b>Spearman</b> bewertet Rangfolgen und monotone Zusammenhänge. <b>Pearson</b> bewertet geradlinige Zusammenhänge. Beide Werte liegen zwischen −1 und +1.</div></aside>
+        <div class="analysis-results"><article class="card"><div id="corrBars" class="plot compact"></div></article><div class="two-col"><article class="card"><div id="corrScatter" class="plot"></div></article><article class="card"><div id="corrTime" class="plot"></div></article></div><article class="card table-wrap"><table><thead><tr><th>Parameter</th><th>r</th><th>gemeinsame Werte</th><th>Einordnung</th></tr></thead><tbody id="corrTable"></tbody></table></article></div>
+      </div>
+    </section>
+
+    <section id="map" class="tab">
+      <div class="section-title"><div><p class="eyebrow">ZEITANIMATION</p><h2>Wind, Regen und Partikel auf der Karte</h2><p>Die Windrose und alle Kennzahlen folgen dem ausgewählten Mittelungsfenster.</p></div></div>
+      <article class="card map-controls"><button id="play" class="primary">▶ Start</button><label>Mittelung<select id="mapAverage"><option value="5">5 Minuten</option><option value="30">30 Minuten</option><option value="60" selected>1 Stunde</option><option value="720">12 Stunden</option><option value="1440">24 Stunden</option></select></label><label>Karte<select id="basemap"><option value="street">Straßenkarte</option><option value="satellite">Satellit</option></select></label><label class="switch"><input id="rainToggle" type="checkbox" checked><span></span>Regen anzeigen</label><label class="time-control"><b id="mapTime">–</b><input id="timeSlider" type="range" min="0" max="1" value="0"></label></article>
+      <div class="map-grid"><article class="card map-card"><div id="leafletMap"></div><div id="windrose"></div><div class="map-legend"><i class="site-dot"></i> CPC + SMPS <i class="weather-dot"></i> Wetter <i class="air-dot"></i> ARPA</div></article><article class="card"><div id="mapTrend" class="plot map-trend"></div><div id="mapValues" class="value-grid"></div></article></div>
+    </section>
+
+    <section id="method" class="tab">
+      <div class="section-title"><div><p class="eyebrow">TRANSPARENZ</p><h2>Methodik und Grenzen</h2></div></div>
+      <div class="method-grid"><article class="card"><h3>Gemeinsames Zeitraster</h3><p>CPC, SMPS, Wetter und ARPA-Werte werden vor einem Vergleich auf dasselbe Mittelungsintervall gebracht. So dominiert die hoch aufgelöste CPC-Reihe die Statistik nicht allein durch mehr Datenpunkte.</p></article><article class="card"><h3>Windrichtung</h3><p>Windrichtung ist zirkulär: 359° und 1° liegen nahe beieinander. Die Windrose zeigt daher Sektoren; für gerichtete Analysen werden Sinus- und Kosinuskomponenten verwendet.</p></article><article class="card"><h3>Räumliche Repräsentativität</h3><p>Wetter: Roma/Ciampino, 5,89 km. Luftqualität: ARPA Ciampino, 7,61 km, und Cinecittà, 7,95 km. Lokale Strömung und Emissionen können am Messpunkt abweichen.</p></article><article class="card"><h3>Keine Kausalität</h3><p>Eine Korrelation ist ein gemeinsamer zeitlicher Verlauf, kein Quellenbeweis. Tagesgang, Verkehr, Strahlung und Grenzschichthöhe können mehrere Parameter gleichzeitig beeinflussen.</p></article></div>
+    </section>
+  </main>
+  <footer>Daten: CPC · SMPS · Meteostat/Open-Meteo · ARPA Lazio <span id="generated"></span></footer>
+  <div id="loading">Dashboard wird geladen …</div>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

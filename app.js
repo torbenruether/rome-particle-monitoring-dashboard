@@ -1,0 +1,80 @@
+const C={green:'#176b55',red:'#d75446',blue:'#3277b8',orange:'#e49242',ink:'#15231f',grid:'#e6ebe7'};
+const plotConfig={responsive:true,displaylogo:false,modeBarButtonsToRemove:['lasso2d','select2d']};
+const baseLayout={margin:{l:62,r:24,t:30,b:48},paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',font:{family:'Inter, sans-serif',color:C.ink,size:11},xaxis:{gridcolor:C.grid,automargin:true},yaxis:{gridcolor:C.grid,automargin:true},legend:{orientation:'h',y:1.12}};
+let D,times,series,labels,map,rainLayer,playing=false,playTimer=null;
+const responseKeys=['CPC','SMPSTotal','GeometricMeanDiameter','GeometricStdDev','ModeDiameter','FractionBelow30nm','FractionBelow100nm','FractionAbove100nm'];
+const defaultPlot=['CPC','SMPSTotal','Temperature','WindSpeed','ARPA_NO2'];
+
+Promise.all(['meta.json','series-particles.json','series-environment.json','heatmap-1.json','heatmap-2.json'].map(n=>fetch('data/'+n).then(r=>{if(!r.ok)throw Error(n+' fehlt');return r.json()}))).then(([meta,p,e,h1,h2])=>init({...meta,series:{...p,...e},heatmap:{time:h1.time.concat(h2.time),sizes:h1.sizes,z:h1.z.map((row,i)=>row.concat(h2.z[i]))}})).catch(e=>{document.querySelector('#loading').textContent='Dashboard-Daten konnten nicht geladen werden: '+e.message});
+
+function init(data){D=data;times=data.time.map(x=>new Date(x));series=data.series;labels=data.labels||{};
+  document.querySelector('#period').textContent=`${fmt(times[0],true)} – ${fmt(times.at(-1),true)}`;
+  document.querySelector('#generated').textContent=`· Export ${data.generated}`;
+  buildSelectors();bindTabs();drawOverview();drawData();drawCorrelations();initMap();updateMap();
+  document.querySelector('#loading').remove();
+}
+function label(k){return labels[k]||k.replace(/^ARPA_/,'ARPA ')}
+function fmt(d,dateOnly=false){return new Intl.DateTimeFormat('de-DE',dateOnly?{day:'2-digit',month:'2-digit',year:'numeric'}:{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(d)}
+function vals(k){return (series[k]||[]).map(v=>v==null?NaN:+v)}
+function finite(v){return Number.isFinite(v)}
+function mean(a){const f=a.filter(finite);return f.length?f.reduce((s,v)=>s+v,0)/f.length:NaN}
+function median(a){const f=a.filter(finite).sort((a,b)=>a-b);if(!f.length)return NaN;const n=f.length;return n%2?f[(n-1)/2]:(f[n/2-1]+f[n/2])/2}
+function sd(a){const m=mean(a),f=a.filter(finite);return f.length>1?Math.sqrt(f.reduce((s,v)=>s+(v-m)**2,0)/(f.length-1)):NaN}
+function zscore(a){const m=mean(a),s=sd(a);return a.map(v=>finite(v)&&s?((v-m)/s):NaN)}
+function paired(a,b){const x=[],y=[];for(let i=0;i<Math.min(a.length,b.length);i++)if(finite(a[i])&&finite(b[i])){x.push(a[i]);y.push(b[i])}return{x,y}}
+function pearson(a,b){const p=paired(a,b),mx=mean(p.x),my=mean(p.y);let n=0,dx=0,dy=0;for(let i=0;i<p.x.length;i++){const x=p.x[i]-mx,y=p.y[i]-my;n+=x*y;dx+=x*x;dy+=y*y}return{r:dx&&dy?n/Math.sqrt(dx*dy):NaN,n:p.x.length,x:p.x,y:p.y}}
+function ranks(a){const order=a.map((v,i)=>[v,i]).sort((x,y)=>x[0]-y[0]),r=Array(a.length);for(let i=0;i<order.length;){let j=i;while(j+1<order.length&&order[j+1][0]===order[i][0])j++;const q=(i+j+2)/2;for(let k=i;k<=j;k++)r[order[k][1]]=q;i=j+1}return r}
+function corr(a,b,method){const p=paired(a,b);return method==='Spearman'?{...pearson(ranks(p.x),ranks(p.y)),x:p.x,y:p.y}:pearson(p.x,p.y)}
+function resample(k,minutes){const y=vals(k),step=Math.max(1,minutes/5),x=[],o=[];for(let i=0;i<y.length;i+=step){x.push(times[i]);o.push(mean(y.slice(i,i+step)))}return{x,y:o}}
+function shift(a,n){if(!n)return a.slice();return n>0?Array(n).fill(NaN).concat(a.slice(0,-n)):a.slice(-n).concat(Array(-n).fill(NaN))}
+function plot(id,traces,layout={}){Plotly.react(id,traces,{...baseLayout,...layout,xaxis:{...baseLayout.xaxis,...(layout.xaxis||{})},yaxis:{...baseLayout.yaxis,...(layout.yaxis||{})}},plotConfig)}
+
+function bindTabs(){document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button,.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelector('#'+b.dataset.tab).classList.add('active');if(b.dataset.tab==='map')setTimeout(()=>map.invalidateSize(),0)})}
+function buildSelectors(){
+  const available=Object.keys(series);const scalar=available.filter(k=>!['WindDirection'].includes(k));
+  document.querySelector('#dataVariables').innerHTML=scalar.map(k=>`<label><input type="checkbox" value="${k}" ${defaultPlot.includes(k)?'checked':''}> ${label(k)}</label>`).join('');
+  document.querySelector('#corrResponse').innerHTML=responseKeys.filter(k=>available.includes(k)).map(k=>`<option value="${k}">${label(k)}</option>`).join('');
+  const predictors=available.filter(k=>!responseKeys.includes(k)&&k!=='WindDirection');
+  document.querySelector('#corrPredictors').innerHTML=predictors.map((k,i)=>`<option value="${k}" ${['Temperature','WindSpeed','ARPA_NO2'].includes(k)?'selected':''}>${label(k)}</option>`).join('');
+  ['dataAverage','dataMode','showHeatmap'].forEach(id=>document.querySelector('#'+id).onchange=drawData);document.querySelectorAll('#dataVariables input').forEach(x=>x.onchange=drawData);
+  ['corrResponse','corrPredictors','corrMethod','corrAverage'].forEach(id=>document.querySelector('#'+id).onchange=drawCorrelations);document.querySelector('#corrLag').oninput=e=>{document.querySelector('#lagValue').value=e.target.value+' h';drawCorrelations()};
+}
+
+function drawOverview(){const c=resample('CPC',60),s=resample('SMPSTotal',60),p=paired(c.y,s.y),r=corr(c.y,s.y,'Spearman');
+  document.querySelector('#quickCorr').textContent=finite(r.r)?r.r.toFixed(3):'–';document.querySelector('#quickCorrText').textContent=`CPC–SMPS Spearman · n=${r.n}`;
+  document.querySelector('#overviewStats').innerHTML=`<span><b>${mean(p.x).toFixed(0)}</b>CPC #/cm³</span><span><b>${mean(p.y).toFixed(0)}</b>SMPS #/cm³</span><span><b>${times.length}</b>5-min-Zeitpunkte</span>`;
+  plot('overviewPlot',[{x:c.x,y:c.y,name:'CPC',line:{color:C.red}},{x:s.x,y:s.y,name:'SMPS',line:{color:C.blue}}],{hovermode:'x unified',yaxis:{title:'#/cm³'}});
+  const weeks=groupBy(resample('CPC',60),d=>monday(d)),sw=groupBy(resample('SMPSTotal',60),d=>monday(d));plot('weeklyPlot',[{x:weeks.x,y:weeks.y,name:'CPC',mode:'lines+markers',line:{color:C.red}},{x:sw.x,y:sw.y,name:'SMPS',mode:'lines+markers',line:{color:C.blue}}],{yaxis:{title:'Mittel #/cm³'}});
+  const cw=dayType(c),mw=dayType(s);plot('workdayPlot',[{x:['Werktag','Wochenende'],y:cw,name:'CPC',type:'bar',marker:{color:C.red}},{x:['Werktag','Wochenende'],y:mw,name:'SMPS',type:'bar',marker:{color:C.blue}}],{barmode:'group',yaxis:{title:'Mittel #/cm³'}})
+}
+function monday(d){const x=new Date(d),day=(x.getDay()+6)%7;x.setHours(0,0,0,0);x.setDate(x.getDate()-day);return x.getTime()}
+function groupBy(T,key){const g=new Map;T.x.forEach((d,i)=>{const k=key(d);if(!g.has(k))g.set(k,[]);g.get(k).push(T.y[i])});return{x:[...g.keys()].map(x=>new Date(+x)),y:[...g.values()].map(mean)}}
+function dayType(T){const a=[[],[]];T.x.forEach((d,i)=>a[d.getDay()===0||d.getDay()===6?1:0].push(T.y[i]));return a.map(mean)}
+
+function drawData(){const keys=[...document.querySelectorAll('#dataVariables input:checked')].map(x=>x.value),avg=+document.querySelector('#dataAverage').value,mode=document.querySelector('#dataMode').value;const traces=[];const colors=[C.red,C.blue,C.green,C.orange,'#7d5ba6','#4f9298','#a26245'];let layout={hovermode:'x unified',yaxis:{title:mode==='standard'?'Standardisierte Abweichung':''}};
+  keys.forEach((k,i)=>{const T=resample(k,avg);let y=mode==='standard'?zscore(T.y):T.y;const tr={x:T.x,y,name:label(k),line:{color:colors[i%colors.length]}};if(mode==='axes'&&i){const ax='y'+(i+1);tr.yaxis=ax;layout['yaxis'+(i+1)]={title:{text:label(k),font:{color:colors[i%colors.length]}},tickfont:{color:colors[i%colors.length]},overlaying:'y',side:i%2?'right':'left',position:i%2?Math.min(.98,.88-(i-1)*.05):Math.max(.02,.12+(i-1)*.05),showgrid:false}}});plot('dataPlot',traces,layout);
+  const show=document.querySelector('#showHeatmap').checked;document.querySelector('#heatmapCard').classList.toggle('hidden',!show);if(show){const H=D.heatmap,z=H.z.map(row=>row.map(v=>v>0?Math.log10(v):null));plot('heatmapPlot',[{x:H.time,y:H.sizes,z,type:'heatmap',colorscale:'Turbo',colorbar:{title:'log₁₀'}}],{yaxis:{type:'log',title:'Partikelgröße (nm)'},xaxis:{title:'Datum'},margin:{l:70,r:35,t:25,b:50}})}
+}
+
+function drawCorrelations(){const response=document.querySelector('#corrResponse').value,predictors=[...document.querySelector('#corrPredictors').selectedOptions].map(x=>x.value),method=document.querySelector('#corrMethod').value,avg=+document.querySelector('#corrAverage').value,lag=+document.querySelector('#corrLag').value;if(!response||!predictors.length)return;const Y=resample(response,avg),lagBins=Math.round(lag*60/avg),rows=predictors.map(k=>{const X=resample(k,avg),xy=corr(Y.y,shift(X.y,lagBins),method);return{k,X,xy}});
+  plot('corrBars',[{x:rows.map(x=>x.xy.r),y:rows.map(x=>label(x.k)),type:'bar',orientation:'h',marker:{color:rows.map(x=>x.xy.r>=0?C.green:C.red)}}],{margin:{l:170,r:30,t:20,b:45},xaxis:{range:[-1,1],title:method+' r'}});
+  document.querySelector('#corrTable').innerHTML=rows.map(x=>`<tr><td>${label(x.k)}</td><td><b>${finite(x.xy.r)?x.xy.r.toFixed(3):'–'}</b></td><td>${x.xy.n}</td><td>${strength(x.xy.r)}</td></tr>`).join('');const first=rows[0];
+  plot('corrScatter',[{x:first.xy.x,y:first.xy.y,mode:'markers',marker:{size:7,color:C.green,opacity:.45}}],{title:{text:`${label(first.k)} · r=${first.xy.r.toFixed(3)}`,font:{size:13}},xaxis:{title:label(first.k)},yaxis:{title:label(response)},showlegend:false});
+  const xShift=shift(first.X.y,lagBins);plot('corrTime',[{x:Y.x,y:zscore(Y.y),name:label(response),line:{color:C.red}},{x:Y.x,y:zscore(xShift),name:label(first.k),line:{color:C.green}}],{title:{text:'Standardisierte Zeitverläufe',font:{size:13}},hovermode:'x unified',yaxis:{title:'z-Wert'}})
+}
+function strength(r){const a=Math.abs(r);if(!finite(a))return'keine Auswertung';if(a>=.7)return'stark';if(a>=.4)return'mittel';if(a>=.2)return'schwach';return'sehr schwach'}
+
+function initMap(){const s=D.site;map=L.map('leafletMap',{zoomControl:true}).setView([s.latitude,s.longitude],12);setBasemap('street');L.circleMarker([s.latitude,s.longitude],{radius:9,color:'#fff',weight:3,fillColor:C.red,fillOpacity:1}).addTo(map).bindPopup('<b>CPC + SMPS</b><br>Partikelmesspunkt');L.circleMarker([s.weatherLatitude,s.weatherLongitude],{radius:8,color:'#fff',weight:3,fillColor:C.blue,fillOpacity:1}).addTo(map).bindPopup('<b>'+s.weatherName+'</b><br>Wetterstation');[[s.airLatitude,s.airLongitude,s.airName],[s.air2Latitude,s.air2Longitude,s.air2Name]].forEach(a=>L.circleMarker([a[0],a[1]],{radius:7,color:'#fff',weight:3,fillColor:C.green,fillOpacity:1}).addTo(map).bindPopup('<b>'+a[2]+'</b><br>Luftqualität'));
+  document.querySelector('#basemap').onchange=e=>setBasemap(e.target.value);document.querySelector('#mapAverage').onchange=()=>{setSlider();updateMap()};document.querySelector('#rainToggle').onchange=updateMap;document.querySelector('#timeSlider').oninput=updateMap;document.querySelector('#play').onclick=togglePlay;setSlider();
+}
+let tileLayer;function setBasemap(type){if(tileLayer)tileLayer.remove();tileLayer=L.tileLayer(type==='satellite'?'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}':'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:type==='satellite'?'Tiles © Esri':'© OpenStreetMap'}).addTo(map)}
+function setSlider(){const avg=+document.querySelector('#mapAverage').value,steps=Math.ceil(times.length/(avg/5)),sl=document.querySelector('#timeSlider');sl.max=Math.max(0,steps-1);sl.value=Math.min(+sl.value,+sl.max)}
+function togglePlay(){playing=!playing;const b=document.querySelector('#play');b.textContent=playing?'■ Stopp':'▶ Start';clearInterval(playTimer);if(playing)playTimer=setInterval(()=>{const s=document.querySelector('#timeSlider');s.value=(+s.value+1)%(+s.max+1);updateMap()},380)}
+function updateMap(){if(!D)return;const avg=+document.querySelector('#mapAverage').value,idx=Math.min(times.length-1,+document.querySelector('#timeSlider').value*(avg/5)),half=Math.max(1,Math.round(avg/10)),a=Math.max(0,idx-half),b=Math.min(times.length,idx+half+1),m=k=>mean(vals(k).slice(a,b));const wd=circularMean(vals('WindDirection').slice(a,b)),ws=m('WindSpeed'),rain=m('Precipitation'),s=D.site;
+  document.querySelector('#mapTime').textContent=fmt(times[idx]);document.querySelector('#mapValues').innerHTML=card('CPC',m('CPC'),'#/cm³')+card('SMPS',m('SMPSTotal'),'#/cm³')+card('Wind',ws,'m/s · aus '+(finite(wd)?wd.toFixed(0):'–')+'°')+card('Regen',rain,'mm/h')+card('NO₂',m('ARPA_NO2'),'µg/m³')+card('O₃',m('ARPA_O3'),'µg/m³')+card('PM₁₀',m('ARPA_PM10'),'µg/m³')+card('PM₂.₅',m('ARPA_PM2_5'),'µg/m³');
+  if(rainLayer)rainLayer.remove();if(document.querySelector('#rainToggle').checked&&finite(rain)&&rain>0)rainLayer=L.circle([s.weatherLatitude,s.weatherLongitude],{radius:300+rain*650,color:C.blue,fillColor:C.blue,fillOpacity:.18,weight:2}).addTo(map);
+  windRose(vals('WindDirection').slice(a,b),wd);const Cpc=resample('CPC',avg),Smps=resample('SMPSTotal',avg),R=resample('Precipitation',avg);plot('mapTrend',[{x:Cpc.x,y:Cpc.y,name:'CPC',line:{color:C.red}},{x:Smps.x,y:Smps.y,name:'SMPS',line:{color:C.blue}},{x:R.x,y:R.y,name:'Regen',yaxis:'y2',type:'bar',marker:{color:'rgba(50,119,184,.24)'}},{x:[times[idx],times[idx]],y:[0,Math.max(...Cpc.y.filter(finite),...Smps.y.filter(finite))],name:'Kartenzeit',line:{color:'#b34ead',width:2}}],{hovermode:'x unified',yaxis:{title:'Partikel #/cm³'},yaxis2:{title:'Regen mm/h',overlaying:'y',side:'right',showgrid:false},margin:{l:64,r:58,t:28,b:48}})
+}
+function card(n,v,u){return`<div>${n}<b>${finite(v)?v.toFixed(v>100?0:1):'–'}</b>${u}</div>`}
+function circularMean(a){const f=a.filter(finite);if(!f.length)return NaN;const s=mean(f.map(x=>Math.sin(x*Math.PI/180))),c=mean(f.map(x=>Math.cos(x*Math.PI/180)));return(Math.atan2(s,c)*180/Math.PI+360)%360}
+function windRose(a,wd){const bins=Array(16).fill(0);a.filter(finite).forEach(v=>bins[Math.floor(((v+11.25)%360)/22.5)]++);const theta=bins.map((_,i)=>i*22.5);const traces=[{type:'barpolar',r:bins,theta,width:Array(16).fill(20),marker:{color:C.blue,opacity:.72},name:'Häufigkeit'}];if(finite(wd))traces.push({type:'scatterpolar',r:[0,Math.max(1,...bins)],theta:[wd,wd],mode:'lines',line:{color:'#b34ead',width:4},name:'Mittel'});Plotly.react('windrose',traces,{margin:{l:22,r:22,t:28,b:20},paper_bgcolor:'rgba(0,0,0,0)',showlegend:false,polar:{angularaxis:{direction:'clockwise',rotation:90,tickfont:{size:9}},radialaxis:{showticklabels:false,gridcolor:C.grid}}},plotConfig)}
