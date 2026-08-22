@@ -5,11 +5,12 @@ let D,times,series,labels,map,rainLayer,playing=false,playTimer=null;
 const responseKeys=['CPC','SMPSTotal','GeometricMeanDiameter','GeometricStdDev','ModeDiameter','FractionBelow30nm','FractionBelow100nm','FractionAbove100nm'];
 const defaultPlot=['CPC','SMPSTotal','Temperature','WindSpeed','ARPA_NO2','AQ_NO2'];
 const siteId=new URLSearchParams(location.search).get('site')||'rome';
+const siteSelect=document.querySelector('#siteSelect');siteSelect.value=siteId;siteSelect.onchange=e=>{const loading=document.querySelector('#loading');if(loading)loading.textContent='Standort wird geladen …';const url=new URL(location.href);url.searchParams.set('site',e.target.value);url.searchParams.delete('v');location.assign(url.href)};
 
 fetch(`data/${siteId}-monitoring.json`).then(r=>{if(!r.ok)throw Error(`${siteId}-monitoring.json fehlt`);return r.json()}).then(init).catch(e=>{document.querySelector('#loading').textContent='Dashboard-Daten konnten nicht geladen werden: '+e.message});
 
 function init(data){D=data;times=data.time.map(x=>new Date(x));series=data.series;labels=data.labels||{};
-  document.querySelector('#siteSelect').value=siteId;document.querySelector('#siteSelect').onchange=e=>{location.search='?site='+e.target.value};document.querySelector('#siteEyebrow').textContent=data.site.name.toUpperCase()+' · 2026';
+  document.querySelector('#siteEyebrow').textContent=data.site.name.toUpperCase()+' · 2026';
   document.querySelector('#methodSpatial').textContent=`Wetter: ${data.site.weatherName}, ${distanceKm(data.site.latitude,data.site.longitude,data.site.weatherLatitude,data.site.weatherLongitude).toFixed(2)} km. Luftqualität: ${data.site.airName}, ${distanceKm(data.site.latitude,data.site.longitude,data.site.airLatitude,data.site.airLongitude).toFixed(2)} km, und ${data.site.air2Name}, ${distanceKm(data.site.latitude,data.site.longitude,data.site.air2Latitude,data.site.air2Longitude).toFixed(2)} km. Lokale Strömung und Emissionen können am Messpunkt abweichen.`;
   document.querySelector('#period').textContent=`${fmt(times[0],true)} – ${fmt(times.at(-1),true)}`;
   document.querySelector('#generated').textContent=`· Export ${data.generated}`;
