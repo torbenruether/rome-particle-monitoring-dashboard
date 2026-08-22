@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Interaktives Dashboard für CPC-, SMPS-, Wetter- und ARPA-Luftqualitätsdaten der Messkampagne in Rom.">
-  <title>Partikelmonitoring Rom</title>
+  <meta name="description" content="Interaktives Dashboard für CPC-, SMPS-, Wetter- und Luftqualitätsdaten in Rom und Hamburg.">
+  <title>Partikelmonitoring</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="topbar">
-    <div><p class="eyebrow">ISPRA · ROM · 2026</p><h1>Partikelmonitoring</h1></div>
-    <div class="status"><span></span><b>Messkampagne geladen</b><small id="period">Daten werden vorbereitet …</small></div>
+    <div><p id="siteEyebrow" class="eyebrow">MESSKAMPAGNE · 2026</p><h1>Partikelmonitoring</h1></div>
+    <div class="header-tools"><label>Standort<select id="siteSelect"><option value="rome">Rom · ISPRA</option><option value="hamburg">Hamburg · Sternschanze</option></select></label><div class="status"><span></span><b>Messkampagne geladen</b><small id="period">Daten werden vorbereitet …</small></div></div>
   </header>
   <nav class="tabs" aria-label="Dashboardbereiche">
     <button class="active" data-tab="overview">Übersicht</button>
@@ -49,16 +49,17 @@
 
     <section id="map" class="tab">
       <div class="section-title"><div><p class="eyebrow">ZEITANIMATION</p><h2>Wind, Regen und Partikel auf der Karte</h2><p>Die Windrose und alle Kennzahlen folgen dem ausgewählten Mittelungsfenster.</p></div></div>
-      <article class="card map-controls"><button id="play" class="primary">▶ Start</button><label>Mittelung<select id="mapAverage"><option value="5">5 Minuten</option><option value="30">30 Minuten</option><option value="60" selected>1 Stunde</option><option value="720">12 Stunden</option><option value="1440">24 Stunden</option></select></label><label>Karte<select id="basemap"><option value="street">Straßenkarte</option><option value="satellite">Satellit</option></select></label><label class="switch"><input id="rainToggle" type="checkbox" checked><span></span>Regen anzeigen</label><label class="time-control"><b id="mapTime">–</b><input id="timeSlider" type="range" min="0" max="1" value="0"></label></article>
-      <div class="map-grid"><article class="card map-card"><div id="leafletMap"></div><div id="windrose"></div><div class="map-legend"><i class="site-dot"></i> CPC + SMPS <i class="weather-dot"></i> Wetter <i class="air-dot"></i> ARPA</div></article><article class="card"><div id="mapTrend" class="plot map-trend"></div><div id="mapValues" class="value-grid"></div></article></div>
+      <article class="card map-controls"><button id="play" class="primary">▶ Start</button><label>Mittelung<select id="mapAverage"><option value="5">5 Minuten</option><option value="30">30 Minuten</option><option value="60" selected>1 Stunde</option><option value="720">12 Stunden</option><option value="1440">24 Stunden</option></select></label><label>Karte<select id="basemap"><option value="street">Straßenkarte</option><option value="satellite">Satellit</option></select></label><label class="switch"><input id="rainToggle" type="checkbox" checked><span></span>Regen anzeigen</label><label class="switch"><input id="mapHeatmapToggle" type="checkbox"><span></span>SMPS-Heatmap</label><label class="time-control"><b id="mapTime">–</b><input id="timeSlider" type="range" min="0" max="1" value="0"></label></article>
+      <article class="card pollutant-controls"><div><b>Schadstoffe im Zeitplot</b><span class="info" data-tip="Jeder Schadstoff kann einzeln ein- oder ausgeblendet werden. Die Konzentrationen erscheinen auf einer eigenen Achse in µg/m³.">i</span></div><div id="mapPollutants" class="pollutant-checks"></div><button id="hidePollutants" class="secondary">Alle ausblenden</button></article>
+      <div class="map-grid"><article class="card map-card"><div id="leafletMap"></div><div id="windrose"></div><div class="map-legend"><i class="site-dot"></i> CPC + SMPS <i class="weather-dot"></i> Wetter <i class="air-dot"></i> Luftqualität</div></article><article class="card"><div id="mapTrend" class="plot map-trend"></div><div id="mapValues" class="value-grid"></div></article></div>
     </section>
 
     <section id="method" class="tab">
       <div class="section-title"><div><p class="eyebrow">TRANSPARENZ</p><h2>Methodik und Grenzen</h2></div></div>
-      <div class="method-grid"><article class="card"><h3>Gemeinsames Zeitraster</h3><p>CPC, SMPS, Wetter und ARPA-Werte werden vor einem Vergleich auf dasselbe Mittelungsintervall gebracht. So dominiert die hoch aufgelöste CPC-Reihe die Statistik nicht allein durch mehr Datenpunkte.</p></article><article class="card"><h3>Windrichtung</h3><p>Windrichtung ist zirkulär: 359° und 1° liegen nahe beieinander. Die Windrose zeigt daher Sektoren; für gerichtete Analysen werden Sinus- und Kosinuskomponenten verwendet.</p></article><article class="card"><h3>Räumliche Repräsentativität</h3><p>Wetter: Roma/Ciampino, 5,89 km. Luftqualität: ARPA Ciampino, 7,61 km, und Cinecittà, 7,95 km. Lokale Strömung und Emissionen können am Messpunkt abweichen.</p></article><article class="card"><h3>Keine Kausalität</h3><p>Eine Korrelation ist ein gemeinsamer zeitlicher Verlauf, kein Quellenbeweis. Tagesgang, Verkehr, Strahlung und Grenzschichthöhe können mehrere Parameter gleichzeitig beeinflussen.</p></article></div>
+      <div class="method-grid"><article class="card"><h3>Gemeinsames Zeitraster</h3><p>CPC, SMPS, Wetter und Luftqualitätswerte werden vor einem Vergleich auf dasselbe Mittelungsintervall gebracht. So dominiert die hoch aufgelöste CPC-Reihe die Statistik nicht allein durch mehr Datenpunkte.</p></article><article class="card"><h3>Windrichtung</h3><p>Windrichtung ist zirkulär: 359° und 1° liegen nahe beieinander. Die Windrose zeigt daher Sektoren; für gerichtete Analysen werden Sinus- und Kosinuskomponenten verwendet.</p></article><article class="card"><h3>Räumliche Repräsentativität</h3><p id="methodSpatial">Stationsabstände werden aus den Standortkoordinaten berechnet. Lokale Strömung und Emissionen können am Messpunkt abweichen.</p></article><article class="card"><h3>Keine Kausalität</h3><p>Eine Korrelation ist ein gemeinsamer zeitlicher Verlauf, kein Quellenbeweis. Tagesgang, Verkehr, Strahlung und Grenzschichthöhe können mehrere Parameter gleichzeitig beeinflussen.</p></article></div>
     </section>
   </main>
-  <footer>Daten: CPC · SMPS · Meteostat/Open-Meteo · ARPA Lazio <span id="generated"></span></footer>
+  <footer>Daten: CPC · SMPS · Meteostat/Open-Meteo · ARPA Lazio/Hamburger Luftmessnetz <span id="generated"></span></footer>
   <div id="loading">Dashboard wird geladen …</div>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
