@@ -7,7 +7,7 @@
   <title>Partikelmonitoring</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=20260823a">
+  <link rel="stylesheet" href="styles.css?v=20260823b">
 </head>
 <body>
   <header class="topbar">
@@ -65,13 +65,13 @@
 
     <section id="method" class="tab">
       <div class="section-title"><div><p class="eyebrow">TRANSPARENZ</p><h2>Methodik und Grenzen</h2></div></div>
-      <div class="method-grid"><article class="card"><h3>Gemeinsames Zeitraster</h3><p>CPC, SMPS, Wetter und Luftqualitätswerte werden vor einem Vergleich auf dasselbe Mittelungsintervall gebracht. So dominiert die hoch aufgelöste CPC-Reihe die Statistik nicht allein durch mehr Datenpunkte.</p></article><article class="card"><h3>Windrichtung</h3><p>Windrichtung ist zirkulär: 359° und 1° liegen nahe beieinander. Die Windrose zeigt daher Sektoren; für gerichtete Analysen werden Sinus- und Kosinuskomponenten verwendet.</p></article><article class="card"><h3>Räumliche Repräsentativität</h3><p id="methodSpatial">Stationsabstände werden aus den Standortkoordinaten berechnet. Lokale Strömung und Emissionen können am Messpunkt abweichen.</p></article><article class="card"><h3>Keine Kausalität</h3><p>Eine Korrelation ist ein gemeinsamer zeitlicher Verlauf, kein Quellenbeweis. Tagesgang, Verkehr, Strahlung und Grenzschichthöhe können mehrere Parameter gleichzeitig beeinflussen.</p></article><article id="shipMethodCard" class="card hidden"><h3>Schiffspassagen</h3><p>Die Passagezeitpunkte werden am Messort gezählt und in dasselbe Mittelungsintervall wie die Partikeldaten eingeordnet. Sie kennzeichnen zeitliche Nähe zu einer Passage, aber weder eine exakte Schiffsposition noch den Nachweis einer Emissionsquelle.</p></article></div>
+      <div class="method-grid"><article class="card"><h3>Gemeinsames Zeitraster</h3><p>CPC, SMPS, Wetter und Luftqualitätswerte werden vor einem Vergleich auf dasselbe Mittelungsintervall gebracht. So dominiert die hoch aufgelöste CPC-Reihe die Statistik nicht allein durch mehr Datenpunkte.</p></article><article class="card"><h3>Windrichtung</h3><p>Windrichtung ist zirkulär: 359° und 1° liegen nahe beieinander. Die Windrose zeigt daher Sektoren; für gerichtete Analysen werden Sinus- und Kosinuskomponenten verwendet.</p></article><article class="card"><h3>Räumliche Repräsentativität</h3><p id="methodSpatial">Stationsabstände werden aus den Standortkoordinaten berechnet. Lokale Strömung und Emissionen können am Messpunkt abweichen.</p></article><article class="card"><h3>Keine Kausalität</h3><p>Eine Korrelation ist ein gemeinsamer zeitlicher Verlauf, kein Quellenbeweis. Tagesgang, Verkehr, Strahlung und Grenzschichthöhe können mehrere Parameter gleichzeitig beeinflussen.</p></article><article id="shipMethodCard" class="card hidden"><h3>Schiffspassagen</h3><p>Die Passagezeitpunkte werden am Messort gezählt und in dasselbe Mittelungsintervall wie die Partikeldaten eingeordnet. Die Schiffssymbole auf der Karte werden aus Passagezeit, Kurs und Geschwindigkeit angenähert; sie sind keine gemessenen AIS-Positionen und kein Emissionsnachweis.</p></article></div>
     </section>
   </main>
   <footer><span id="footerData">Daten: CPC · SMPS · Meteostat/Open-Meteo · ARPA Lazio/Hamburger Luftmessnetz</span> <span id="generated"></span></footer>
   <div id="loading">Dashboard wird geladen …</div>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="app.js?v=20260823a"></script>
+  <script src="app.js?v=20260823b"></script>
 </body>
 </html>
