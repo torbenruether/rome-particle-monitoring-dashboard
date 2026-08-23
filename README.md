@@ -8,6 +8,6 @@ The animated map includes an optional near-surface backward-advection cloud. Its
 
 Hamburg data are enriched with weather from Hamburg-Fuhlsbuettel and air-quality observations from the co-located Sternschanze background station (13ST/DEHH008) plus the nearby Stresemannstrasse traffic station (17SM/DEHH026).
 
-Hohe Düne contains no SMPS measurements. Its four particle series are TSI 3789 water CPC, TSI 3783 water CPC, TSI 3750 butanol CPC, and Partector; the TSI 3750 is used as the reference CPC. Ship symbols near the passage point are estimated from crossing time, course, and speed because the source table contains no coordinates. Weather from the campaign coordinates and official PM10, PM2.5, NO2, and SO2 observations from the co-located Rostock-Hohe Düne station (DEMV031) are included.
+Hohe Düne contains no SMPS measurements. Its four particle series are TSI 3789 water CPC, TSI 3783 water CPC, TSI 3750 butanol CPC, and Partector; the TSI 3750 is used as the reference CPC. Ship symbols remain visible for at least one hour and are estimated from crossing time, course, and measured speed, with a 7 kn fallback because the source table contains no coordinates. Weather from the campaign coordinates and official PM10, PM2.5, NO2, and SO2 observations from the co-located Rostock-Hohe Düne station (DEMV031) are included.
 
 The static GitHub Pages site is generated from `ISPRARomeDisp.m` via `exportWebData.m`. Correlations describe statistical association and do not by themselves identify a causal emission source.
