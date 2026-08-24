@@ -6,7 +6,7 @@ The dashboard combines particle-number concentration, synchronized SMPS size-dis
 
 The animated map includes an optional near-surface backward-advection cloud. Its direction and extent follow the station wind; its shading follows CPC concentration. Individually selectable, color-coded pollutant clouds use the same exploratory treatment for nearby air-quality observations. These are possible-origin corridors, not trajectory models or source proof.
 
-Hamburg data are enriched with weather from Hamburg-Fuhlsbuettel and air-quality observations from the co-located Sternschanze background station (13ST/DEHH008) plus the nearby Stresemannstrasse traffic station (17SM/DEHH026).
+Hamburg uses the one-minute TSI 3750 HU database export for CPC. It provides 17,164 valid five-minute bins (98.81% coverage) over the shared CPC/SMPS dashboard period. The data are enriched with weather from Hamburg-Fuhlsbuettel and air-quality observations from the co-located Sternschanze background station (13ST/DEHH008) plus the nearby Stresemannstrasse traffic station (17SM/DEHH026).
 
 Hohe Düne contains no SMPS measurements. Its four particle series are TSI 3789 water CPC, TSI 3783 water CPC, TSI 3750 butanol CPC, and Partector; the TSI 3750 is used as the reference CPC. Ship symbols remain visible for at least one hour and are estimated from crossing time, course, and measured speed, with a 7 kn fallback because the source table contains no coordinates. Weather from the campaign coordinates and official PM10, PM2.5, NO2, and SO2 observations from the co-located Rostock-Hohe Düne station (DEMV031) are included.
 
