@@ -4,6 +4,8 @@ Interactive dashboard for the particle-monitoring campaigns in Rome, Hamburg, an
 
 The dashboard combines particle-number concentration, synchronized SMPS size-distribution heatmaps where available, weather, wind roses, rain, official air-quality observations, ship passages, and Pearson/Spearman correlation analysis. A dedicated profile tab shows selectable SMPS bar profiles with 95% confidence intervals for Rome and Hamburg. Use the site selector in the header to switch between all three campaigns.
 
+The complete dashboard is available in German and English. The language selector translates controls, help text, charts, map popups, axes, tables, and dynamically generated analysis results; the preference is retained in the browser.
+
 The animated map includes an optional near-surface backward-advection cloud. Its direction and extent follow the station wind; its shading follows CPC concentration. Individually selectable, color-coded pollutant clouds use the same exploratory treatment for nearby air-quality observations. These are possible-origin corridors, not trajectory models or source proof.
 
 Hamburg uses the one-minute TSI 3750 HU database export for CPC. It provides 17,164 valid five-minute bins (98.81% coverage) over the shared CPC/SMPS dashboard period. The data are enriched with weather from Hamburg-Fuhlsbuettel and air-quality observations from the co-located Sternschanze background station (13ST/DEHH008) plus the nearby Stresemannstrasse traffic station (17SM/DEHH026).
