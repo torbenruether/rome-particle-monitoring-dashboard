@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Interaktives Dashboard für Partikel-, Wetter-, Schiffs- und Luftqualitätsdaten aus Rom, Hamburg und Rostock-Hohe Düne.">
+  <meta name="description" content="Interaktives Dashboard für Partikel-, Wetter- und Luftqualitätsdaten aus Rom, Hamburg, Rostock-Hohe Düne und Bologna.">
   <title>Partikelmonitoring</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
@@ -12,7 +12,7 @@
 <body>
   <header class="topbar">
     <div><p id="siteEyebrow" class="eyebrow">MESSKAMPAGNE · 2026</p><h1>Partikelmonitoring</h1></div>
-    <div class="header-tools"><label>Standort<select id="siteSelect"><option value="rome">Rom · ISPRA</option><option value="hamburg">Hamburg · Sternschanze</option><option value="hoheduene">Rostock · Hohe Düne</option></select></label><label>Sprache<select id="languageSelect"><option value="de">Deutsch</option><option value="en">English</option></select></label><div class="status"><span></span><b>Messkampagne geladen</b><small id="period">Daten werden vorbereitet …</small></div><a class="tsi-logo" href="https://tsi.com/" target="_blank" rel="noopener noreferrer" aria-label="TSI-Website öffnen"></a></div>
+    <div class="header-tools"><label>Standort<select id="siteSelect"><option value="rome">Rom · ISPRA</option><option value="hamburg">Hamburg · Sternschanze</option><option value="hoheduene">Rostock · Hohe Düne</option><option value="bologna">Bologna · CNR-ISAC</option></select></label><label>Sprache<select id="languageSelect"><option value="de">Deutsch</option><option value="en">English</option></select></label><div class="status"><span></span><b>Messkampagne geladen</b><small id="period">Daten werden vorbereitet …</small></div><a class="tsi-logo" href="https://tsi.com/" target="_blank" rel="noopener noreferrer" aria-label="TSI-Website öffnen"></a></div>
   </header>
   <nav class="tabs" aria-label="Dashboardbereiche">
     <button class="active" data-tab="overview">Übersicht</button>
@@ -72,7 +72,7 @@
   <div id="loading">Dashboard wird geladen …</div>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="i18n.js?v=20260824b"></script>
-  <script src="app.js?v=20260824b"></script>
+  <script src="i18n.js?v=20260826a"></script>
+  <script src="app.js?v=20260826a"></script>
 </body>
 </html>
