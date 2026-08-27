@@ -7,7 +7,7 @@
   <title>Partikelmonitoring</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="styles.css?v=20260824b">
+  <link rel="stylesheet" href="styles.css?v=20260827b">
 </head>
 <body>
   <header class="topbar">
@@ -22,6 +22,7 @@
     <button data-tab="map">Animation & Karte</button>
     <button data-tab="method">Methodik</button>
   </nav>
+  <aside id="outlierControl" class="outlier-control hidden"><label class="switch"><input id="excludeOutliers" type="checkbox" checked><span></span>Ausreißer nicht berücksichtigen</label><span id="outlierStatus"></span><i class="info" data-tip="Konservativer monatlicher Median/MAD-Filter. Markierte Werte bleiben gespeichert und werden nur bei aktiviertem Schalter aus Diagrammen, Profilen, Karte und Korrelationen ausgeblendet.">i</i></aside>
 
   <main>
     <section id="overview" class="tab active">
@@ -72,7 +73,7 @@
   <div id="loading">Dashboard wird geladen …</div>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="i18n.js?v=20260826a"></script>
-  <script src="app.js?v=20260826a"></script>
+  <script src="i18n.js?v=20260827b"></script>
+  <script src="app.js?v=20260827b"></script>
 </body>
 </html>
