@@ -43,8 +43,8 @@ for i, (slug, site_name) in enumerate(SITES):
     d = load(slug); keys = d["site"].get("primaryKeys") or (["CPC", "SMPSTotal"] if "CPC" in d["series"] else ["SMPSTotal"])
     y = arr(d["series"][keys[0]]); t, y = raw(d["time"], y, d["series"].get("OutlierFlag")); mu, sd = np.nanmean(y), np.nanstd(y)
     ax.plot(t, (y - mu) / sd if sd else y * np.nan, lw=1.8, color=COLORS[i], label=site_name)
-ax.set_title("Total concentration time series — all sites"); ax.set_ylabel("Standardized concentration (z-score)"); ax.set_xlabel("Date (original measurements; flagged outlier hours excluded)")
-ax.grid(True, color="#e6ebe7", alpha=1, lw=.8); ax.spines[["top", "right"]].set_visible(False); ax.legend(loc="upper center", bbox_to_anchor=(.5, 1.12), frameon=False, ncol=4)
+ax.set_title("Total concentration time series — all sites"); ax.set_ylabel("Standardized concentration (z-score)"); ax.set_xlabel("Date")
+ax.grid(True, color="#e6ebe7", alpha=1, lw=.8); ax.spines[["top", "right"]].set_visible(False); ax.legend(loc="upper left", frameon=False, ncol=4)
 dense_date_axis(ax); save(fig, "all-sites-overview-timeseries.svg")
 
 # One readable figure for each requested location.
@@ -58,12 +58,12 @@ for slug, site_name in SITES:
         if key == "GeometricMeanDiameter":
             ax2 = ax.twinx(); ax2.set_facecolor("none"); ax2.spines[["top", "left"]].set_visible(False); target = ax2
         target.plot(t, y, lw=1.8, color=COLORS[i], label=label_key(key))
-    ax.set_title(f"{site_name} — total concentration time series"); ax.set_ylabel("Particle number concentration [cm$^{-3}$]"); ax.set_xlabel("Date (original measurements; flagged outlier hours excluded)")
+    ax.set_title(f"{site_name} — total concentration time series"); ax.set_ylabel("Particle number concentration [cm$^{-3}$]"); ax.set_xlabel("Date")
     if ax2 is not None: ax2.set_ylabel("Geometric mean diameter [nm]")
     ax.grid(True, color="#e6ebe7", alpha=1, lw=.8); ax.spines[["top", "right"]].set_visible(False)
     handles, names = ax.get_legend_handles_labels()
     if ax2 is not None: h2, n2 = ax2.get_legend_handles_labels(); handles += h2; names += n2
-    ax.legend(handles, names, loc="upper center", bbox_to_anchor=(.5, 1.12), frameon=False, ncol=min(4, len(names))); dense_date_axis(ax)
+    ax.legend(handles, names, loc="upper left", frameon=False, ncol=min(4, len(names))); dense_date_axis(ax)
     save(fig, f"{slug}-overview-timeseries.svg")
 
 print("Wrote five SVG time-series figures to", OUT)
