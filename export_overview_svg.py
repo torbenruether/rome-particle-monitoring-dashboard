@@ -1,105 +1,65 @@
-"""Export presentation-ready SVG figures from the Bologna dashboard data."""
+"""Export presentation-ready SVG time-series figures for the four campaigns."""
 import json
 from pathlib import Path
-
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 
 ROOT = Path(__file__).resolve().parent
-DATA = ROOT / "data" / "bologna-monitoring.json"
+DATA_DIR = ROOT / "data"
 OUT = ROOT / "figures"
 OUT.mkdir(exist_ok=True)
+SITES = [("bologna", "Bologna"), ("rome", "ISPRA (Rome)"), ("hoheduene", "Hohe Düne"), ("hamburg", "Hamburg")]
+COLORS = ["#c94f4f", "#2776b8", "#2b7f72", "#b34ead", "#e08a3e"]
 
-with DATA.open(encoding="utf-8") as f:
-    d = json.load(f)
+plt.rcParams.update({"font.family": "DejaVu Sans", "font.size": 14, "axes.titlesize": 20, "axes.labelsize": 17, "xtick.labelsize": 13, "ytick.labelsize": 13, "legend.fontsize": 13, "svg.fonttype": "none"})
 
-times = np.array([np.datetime64(x) for x in d["time"]])
-series = d["series"]
-outliers = np.array(series.get("OutlierFlag", [0] * len(times))) == 1
+def load(slug):
+    with (DATA_DIR / f"{slug}-monitoring.json").open(encoding="utf-8") as f: return json.load(f)
 
-def values(key):
-    return np.array([np.nan if x is None else float(x) for x in series[key]], dtype=float)
+def arr(values): return np.array([np.nan if x is None else float(x) for x in values], dtype=float)
 
-def daily_mean(y):
-    days = times.astype("datetime64[D]")
-    unique = np.unique(days)
-    result = []
-    for day in unique:
-        mask = days == day
-        finite = np.isfinite(y[mask])
-        result.append(np.nanmean(y[mask]) if finite.any() else np.nan)
-    return unique.astype("datetime64[ns]").astype("datetime64[s]"), np.array(result)
+def daily(times, y, flags=None):
+    t = np.array([np.datetime64(x) for x in times]).astype("datetime64[D]")
+    if flags is not None: y = y.copy(); y[np.array(flags) == 1] = np.nan
+    days = np.unique(t); out = []
+    for day in days:
+        v = y[t == day]; out.append(np.nanmean(v) if np.isfinite(v).any() else np.nan)
+    return days.astype("datetime64[ns]").astype("datetime64[s]"), np.array(out)
 
-plt.rcParams.update({
-    "font.family": "DejaVu Sans", "font.size": 10, "axes.titlesize": 16,
-    "axes.labelsize": 11, "legend.fontsize": 10, "svg.fonttype": "none",
-})
+def label_key(key):
+    return {"CPC": "CPC total", "SMPSTotal": "SMPS total", "GeometricMeanDiameter": "SMPS GMD", "CPC3789": "CPC 3789", "CPC3783": "CPC 3783", "CPC3750": "CPC 3750", "Partector": "Partector"}.get(key, key)
 
-# Figure 1: daily overview over the complete campaign period.
-primary = "CPC" if "CPC" in series else "SMPSTotal"
-secondary = "SMPSTotal" if primary == "CPC" else "GeometricMeanDiameter"
-primary_label = "CPC total concentration" if primary == "CPC" else "SMPS total concentration"
-secondary_label = "SMPS total concentration" if primary == "CPC" else "SMPS geometric mean diameter"
-a = values(primary); b = values(secondary)
-a[outliers] = np.nan; b[outliers] = np.nan
-td, a_d = daily_mean(a)
-_, b_d = daily_mean(b)
-fig, ax = plt.subplots(figsize=(13.333, 5.6), dpi=160)
-fig.patch.set_alpha(0)
-ax.set_facecolor("none")
-ax.plot(td, a_d, color="#c94f4f", lw=1.35, label=primary_label)
-if secondary == "GeometricMeanDiameter":
-    ax2 = ax.twinx(); ax2.set_facecolor("none")
-    ax2.plot(td, b_d, color="#2776b8", lw=1.35, label=secondary_label)
-    ax2.set_ylabel("Geometric mean diameter [nm]")
-    ax2.spines[["top", "left"]].set_visible(False)
-else:
-    ax.plot(td, b_d, color="#2776b8", lw=1.35, label=secondary_label)
-ax.set_title("Bologna SMPS overview — complete campaign")
-ax.set_ylabel("Number concentration [cm$^{-3}$]")
-ax.set_xlabel("Date (daily means; outlier hours excluded)")
-ax.grid(True, color="#9aa6ad", alpha=0.24, lw=0.7)
-ax.spines[["top", "right"]].set_visible(False)
-handles, labels_ = ax.get_legend_handles_labels()
-if secondary == "GeometricMeanDiameter":
-    h2, l2 = ax2.get_legend_handles_labels(); handles += h2; labels_ += l2
-ax.legend(handles, labels_, loc="upper left", frameon=False, ncol=2)
-ax.xaxis.set_major_locator(mdates.MonthLocator(interval=6))
-ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
-fig.autofmt_xdate(rotation=0, ha="center")
-fig.tight_layout(pad=1.1)
-fig.savefig(OUT / "bologna-overview-timeseries.svg", transparent=True, bbox_inches="tight")
-plt.close(fig)
+def save(fig, name):
+    fig.tight_layout(pad=1.3); fig.savefig(OUT / name, transparent=True, bbox_inches="tight"); plt.close(fig)
 
-# Figure 2: paired hourly correlation, with a linear fit.
-x = values(primary)
-y = values(secondary)
-valid = np.isfinite(x) & np.isfinite(y) & ~outliers
-x, y = x[valid], y[valid]
-pearson = float(np.corrcoef(x, y)[0, 1])
-spearman = float(np.corrcoef(np.argsort(np.argsort(x)), np.argsort(np.argsort(y)))[0, 1])
-fit = np.polyfit(x, y, 1)
-xx = np.linspace(np.nanpercentile(x, 0.5), np.nanpercentile(x, 99.5), 200)
-fig, ax = plt.subplots(figsize=(8.4, 6.1), dpi=160)
-fig.patch.set_alpha(0)
-ax.set_facecolor("none")
-# Keep the SVG lightweight while retaining the full-sample statistics.
-step = max(1, len(x) // 3500)
-ax.scatter(x[::step], y[::step], s=7, alpha=0.2, color="#2b7f72", linewidths=0)
-ax.plot(xx, fit[0] * xx + fit[1], color="#b34ead", lw=2.1, label="Linear fit")
-ax.set_title(f"{primary_label} vs {secondary_label}")
-ax.set_xlabel(primary_label + (" [cm$^{-3}$]" if primary == "CPC" else " [cm$^{-3}$]"))
-ax.set_ylabel(secondary_label + (" [cm$^{-3}$]" if secondary == "SMPSTotal" else " [nm]"))
-ax.grid(True, color="#9aa6ad", alpha=0.24, lw=0.7)
-ax.spines[["top", "right"]].set_visible(False)
-ax.legend(loc="upper left", frameon=False)
-ax.text(0.99, 0.03, f"n = {len(x):,}\nPearson r = {pearson:.3f}\nSpearman ρ = {spearman:.3f}",
-        transform=ax.transAxes, ha="right", va="bottom", fontsize=10,
-        bbox={"boxstyle": "round,pad=0.35", "facecolor": "white", "edgecolor": "#c9d1d5", "alpha": 0.82})
-fig.tight_layout(pad=1.1)
-fig.savefig(OUT / "bologna-cpc-smps-correlation.svg", transparent=True, bbox_inches="tight")
-plt.close(fig)
+# Normalized comparison across all four requested locations.
+fig, ax = plt.subplots(figsize=(13.333, 6.7), dpi=160); fig.patch.set_alpha(0); ax.set_facecolor("none")
+for i, (slug, site_name) in enumerate(SITES):
+    d = load(slug); keys = d["site"].get("primaryKeys") or (["CPC", "SMPSTotal"] if "CPC" in d["series"] else ["SMPSTotal"])
+    y = arr(d["series"][keys[0]]); t, y = daily(d["time"], y, d["series"].get("OutlierFlag")); mu, sd = np.nanmean(y), np.nanstd(y)
+    ax.plot(t, (y - mu) / sd if sd else y * np.nan, lw=1.8, color=COLORS[i], label=site_name)
+ax.set_title("Particle number concentration — all monitoring sites"); ax.set_ylabel("Standardized daily mean (z-score)"); ax.set_xlabel("Date (outlier hours excluded)")
+ax.grid(True, color="#9aa6ad", alpha=.24, lw=.8); ax.spines[["top", "right"]].set_visible(False); ax.legend(loc="upper left", frameon=False, ncol=4)
+ax.xaxis.set_major_locator(mdates.MonthLocator(interval=6)); ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y")); save(fig, "all-sites-overview-timeseries.svg")
 
-print(f"Wrote {OUT / 'bologna-overview-timeseries.svg'}")
-print(f"Wrote {OUT / 'bologna-cpc-smps-correlation.svg'}")
+# One readable figure for each requested location.
+for slug, site_name in SITES:
+    d = load(slug); s = d["series"]; flags = s.get("OutlierFlag")
+    keys = d["site"].get("primaryKeys") or (["CPC", "SMPSTotal"] if "CPC" in s else ["SMPSTotal"])
+    if len(keys) == 1 and keys[0] == "SMPSTotal" and "GeometricMeanDiameter" in s: keys = ["SMPSTotal", "GeometricMeanDiameter"]
+    fig, ax = plt.subplots(figsize=(13.333, 6.7), dpi=160); fig.patch.set_alpha(0); ax.set_facecolor("none"); ax2 = None
+    for i, key in enumerate(keys[:5]):
+        t, y = daily(d["time"], arr(s[key]), flags); target = ax
+        if key == "GeometricMeanDiameter":
+            ax2 = ax.twinx(); ax2.set_facecolor("none"); ax2.spines[["top", "left"]].set_visible(False); target = ax2
+        target.plot(t, y, lw=1.8, color=COLORS[i], label=label_key(key))
+    ax.set_title(f"{site_name} — particle monitoring time series"); ax.set_ylabel("Number concentration [cm$^{-3}$]"); ax.set_xlabel("Date (daily means; outlier hours excluded)")
+    if ax2 is not None: ax2.set_ylabel("Geometric mean diameter [nm]")
+    ax.grid(True, color="#9aa6ad", alpha=.24, lw=.8); ax.spines[["top", "right"]].set_visible(False)
+    handles, names = ax.get_legend_handles_labels()
+    if ax2 is not None: h2, n2 = ax2.get_legend_handles_labels(); handles += h2; names += n2
+    ax.legend(handles, names, loc="upper left", frameon=False, ncol=min(4, len(names))); ax.xaxis.set_major_locator(mdates.MonthLocator(interval=max(1, int(max(1, len(t) / 36))))); ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+    save(fig, f"{slug}-overview-timeseries.svg")
+
+print("Wrote five SVG time-series figures to", OUT)
