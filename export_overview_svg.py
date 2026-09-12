@@ -19,13 +19,12 @@ def load(slug):
 
 def arr(values): return np.array([np.nan if x is None else float(x) for x in values], dtype=float)
 
-def daily(times, y, flags=None):
-    t = np.array([np.datetime64(x) for x in times]).astype("datetime64[D]")
-    if flags is not None: y = y.copy(); y[np.array(flags) == 1] = np.nan
-    days = np.unique(t); out = []
-    for day in days:
-        v = y[t == day]; out.append(np.nanmean(v) if np.isfinite(v).any() else np.nan)
-    return days.astype("datetime64[ns]").astype("datetime64[s]"), np.array(out)
+def raw(times, y, flags=None):
+    """Return every original measurement timestamp/value (no averaging)."""
+    t = np.array([np.datetime64(x) for x in times]).astype("datetime64[ns]")
+    if flags is not None:
+        y = y.copy(); y[np.array(flags) == 1] = np.nan
+    return t.astype("datetime64[s]"), y
 
 def label_key(key):
     return {"CPC": "CPC total", "SMPSTotal": "SMPS total", "GeometricMeanDiameter": "SMPS GMD", "CPC3789": "CPC 3789", "CPC3783": "CPC 3783", "CPC3750": "CPC 3750", "Partector": "Partector"}.get(key, key)
@@ -37,9 +36,9 @@ def save(fig, name):
 fig, ax = plt.subplots(figsize=(13.333, 6.7), dpi=160); fig.patch.set_alpha(0); ax.set_facecolor("none")
 for i, (slug, site_name) in enumerate(SITES):
     d = load(slug); keys = d["site"].get("primaryKeys") or (["CPC", "SMPSTotal"] if "CPC" in d["series"] else ["SMPSTotal"])
-    y = arr(d["series"][keys[0]]); t, y = daily(d["time"], y, d["series"].get("OutlierFlag")); mu, sd = np.nanmean(y), np.nanstd(y)
+    y = arr(d["series"][keys[0]]); t, y = raw(d["time"], y, d["series"].get("OutlierFlag")); mu, sd = np.nanmean(y), np.nanstd(y)
     ax.plot(t, (y - mu) / sd if sd else y * np.nan, lw=1.8, color=COLORS[i], label=site_name)
-ax.set_title("Particle number concentration — all monitoring sites"); ax.set_ylabel("Standardized daily mean (z-score)"); ax.set_xlabel("Date (outlier hours excluded)")
+    ax.set_title("Particle number concentration — all monitoring sites"); ax.set_ylabel("Standardized concentration (z-score)"); ax.set_xlabel("Date (original measurement values; outlier hours excluded)")
 ax.grid(True, color="#9aa6ad", alpha=.24, lw=.8); ax.spines[["top", "right"]].set_visible(False); ax.legend(loc="upper left", frameon=False, ncol=4)
 ax.xaxis.set_major_locator(mdates.MonthLocator(interval=6)); ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y")); save(fig, "all-sites-overview-timeseries.svg")
 
@@ -50,11 +49,11 @@ for slug, site_name in SITES:
     if len(keys) == 1 and keys[0] == "SMPSTotal" and "GeometricMeanDiameter" in s: keys = ["SMPSTotal", "GeometricMeanDiameter"]
     fig, ax = plt.subplots(figsize=(13.333, 6.7), dpi=160); fig.patch.set_alpha(0); ax.set_facecolor("none"); ax2 = None
     for i, key in enumerate(keys[:5]):
-        t, y = daily(d["time"], arr(s[key]), flags); target = ax
+        t, y = raw(d["time"], arr(s[key]), flags); target = ax
         if key == "GeometricMeanDiameter":
             ax2 = ax.twinx(); ax2.set_facecolor("none"); ax2.spines[["top", "left"]].set_visible(False); target = ax2
         target.plot(t, y, lw=1.8, color=COLORS[i], label=label_key(key))
-    ax.set_title(f"{site_name} — particle monitoring time series"); ax.set_ylabel("Number concentration [cm$^{-3}$]"); ax.set_xlabel("Date (daily means; outlier hours excluded)")
+    ax.set_title(f"{site_name} — particle monitoring time series"); ax.set_ylabel("Number concentration [cm$^{-3}$]"); ax.set_xlabel("Date (original measurement values; outlier hours excluded)")
     if ax2 is not None: ax2.set_ylabel("Geometric mean diameter [nm]")
     ax.grid(True, color="#9aa6ad", alpha=.24, lw=.8); ax.spines[["top", "right"]].set_visible(False)
     handles, names = ax.get_legend_handles_labels()
