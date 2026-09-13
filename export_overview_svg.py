@@ -66,4 +66,15 @@ for slug, site_name in SITES:
     ax.legend(handles, names, loc="upper left", frameon=False, ncol=min(4, len(names))); dense_date_axis(ax)
     save(fig, f"{slug}-overview-timeseries.svg")
 
-print("Wrote five SVG time-series figures to", OUT)
+# Additional Hamburg figure containing only the SMPS total concentration.
+d = load("hamburg"); s = d["series"]
+t, y = raw(d["time"], arr(s["SMPSTotal"]), s.get("OutlierFlag"))
+fig, ax = plt.subplots(figsize=(13.333, 6.7), dpi=160); fig.patch.set_alpha(0); ax.set_facecolor("none")
+ax.plot(t, y, lw=1.8, color="#3277b8", label="SMPS total")
+ax.set_title("Hamburg — SMPS total concentration time series")
+ax.set_ylabel("Particle number concentration [cm$^{-3}$]"); ax.set_xlabel("Date")
+ax.grid(True, color="#e6ebe7", alpha=1, lw=.8); ax.spines[["top", "right"]].set_visible(False)
+ax.legend(loc="upper left", frameon=False); dense_date_axis(ax)
+save(fig, "hamburg-smps-overview-timeseries.svg")
+
+print("Wrote six SVG time-series figures to", OUT)
